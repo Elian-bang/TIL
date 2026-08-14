@@ -23,7 +23,9 @@
 | **I**solation | 동시 트랜잭션이 서로 간섭하지 않는다 | **MVCC + 락**. 이 페이지의 본론 |
 | **D**urability | 커밋되면 장애가 나도 남는다 | **redo log (WAL)** — 데이터 파일보다 **먼저** 로그를 디스크에 쓴다 |
 
-**WAL(Write-Ahead Logging)이 왜 필요한가**: 커밋 때마다 데이터 파일 전체를 디스크에 내리면 **랜덤 쓰기**라 느리다. 대신 "무엇을 바꿨는지"를 **순차 쓰기**인 redo log에 먼저 쓰고 커밋을 반환한다. 데이터 파일 반영은 나중에 몰아서 한다. 중간에 죽어도 redo log로 복구된다. → **순차 쓰기가 랜덤 쓰기보다 압도적으로 싸다**는 것이 여기서도 지배 원리다([DB 인덱스](../database/b-tree-index.md) §2-7과 같은 논리).
+> redo·undo가 실제로 어떻게 동작하고 크래시에서 무엇이 살아나는지는 → [내구성과 복구](durability-and-recovery.md)
+
+**WAL(Write-Ahead Logging)이 왜 필요한가**: 커밋 때마다 데이터 파일 전체를 디스크에 내리면 **랜덤 쓰기**라 느리다. 대신 "무엇을 바꿨는지"를 **순차 쓰기**인 redo log에 먼저 쓰고 커밋을 반환한다. 데이터 파일 반영은 나중에 몰아서 한다. 중간에 죽어도 redo log로 복구된다. → **순차 쓰기가 랜덤 쓰기보다 압도적으로 싸다**는 것이 여기서도 지배 원리다([DB 인덱스](b-tree-index.md) §2-7과 같은 논리).
 
 ### 2-2. 격리 수준 — 왜 4단계나 있나
 
@@ -98,7 +100,7 @@ T1 입장에서 **조회할 땐 3건이었는데 갱신은 4건이 됐다.** 이
 
 **대가**: 갭 락은 **존재하지 않는 행까지 잠그는 것**이다. 락 범위가 넓어지고, **서로 다른 트랜잭션이 겹치는 갭을 잡을 확률이 올라간다** → **데드락이 늘어난다.** (그래서 READ COMMITTED에서는 갭 락이 대부분 비활성화된다. RC로 낮추면 데드락이 줄어드는 이유가 이것.)
 
-### 2-6. InnoDB의 락은 인덱스에 걸린다 — [DB 인덱스](../database/b-tree-index.md)과 잇는 다리
+### 2-6. InnoDB의 락은 인덱스에 걸린다 — [DB 인덱스](b-tree-index.md)과 잇는 다리
 
 **가장 중요한 한 줄이다.**
 
@@ -169,7 +171,7 @@ SELECT * FROM send_queue WHERE status='READY' LIMIT 100 FOR UPDATE SKIP LOCKED;
   → **실패해도 롤백되면 안 되는 것**에 쓴다. 예: **발송 실패 이력 기록** — 본 트랜잭션이 롤백돼도 "실패했다"는 기록은 남아야 한다
   → ⚠️ 함정: 커넥션을 **두 개** 쓴다. 풀 크기가 작으면 자기 자신을 기다리다 데드락 난다
 - **`NESTED`**: 세이브포인트 기반 부분 롤백
-- 자세한 프록시 함정은 [Spring](../spring/di-aop-transaction-jpa.md)
+- 자세한 프록시 함정은 [Spring](../../spring/di-aop-transaction-jpa.md)
 
 ### 2-10. 커넥션 풀 — 왜 크다고 좋은 게 아닌가
 
@@ -189,4 +191,10 @@ SELECT * FROM send_queue WHERE status='READY' LIMIT 100 FOR UPDATE SKIP LOCKED;
 > **직관에 반하는 결론**: 풀을 줄였더니 처리량이 올라가는 경우가 실제로 있다. 대기열이 애플리케이션 쪽에 생기는 게 DB 안에서 서로 밟는 것보다 낫기 때문이다.
 
 **⚠️ Virtual Thread와의 함정** ← 내 1core/1GB 환경 얘기와 직결
-가상 스레드를 1만 개 띄워도 **커넥션 풀이 10개면 동시에 DB에 가는 건 10개**다. 나머지는 `connectionTimeout`을 기다리다 예외로 터진다. **스레드를 늘려서 해결되는 병목이 아니다.** → [Java](../java/jvm-gc-concurrency.md) §Virtual Thread와 같은 이야기
+가상 스레드를 1만 개 띄워도 **커넥션 풀이 10개면 동시에 DB에 가는 건 10개**다. 나머지는 `connectionTimeout`을 기다리다 예외로 터진다. **스레드를 늘려서 해결되는 병목이 아니다.** → [Java](../../java/jvm-gc-concurrency.md) §Virtual Thread와 같은 이야기
+
+---
+
+> **기준 버전**: MySQL 8.4 · PostgreSQL 17
+> **확인한 출처**: 없음 — 이 문서는 아직 공식 문서 대조를 거치지 않았다
+> **미확인**: 격리 수준별 기본값(InnoDB=REPEATABLE READ, PostgreSQL=READ COMMITTED) · 갭 락 동작 · 데드락 탐지 방식 — 전부 재확인 필요. PostgreSQL의 팬텀 차단은 갭 락이 아니라 SSI이므로 §2-5는 **InnoDB 한정 서술**이다

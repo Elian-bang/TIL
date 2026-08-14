@@ -99,7 +99,7 @@ public void send(Target t) {
 ```
 
 **무엇이 나쁜가:**
-- **DB 커넥션을 쥔 채로 네트워크를 기다린다** → 커넥션 풀이 빠르게 고갈된다 ([트랜잭션 · 락](../database/transaction-and-lock.md) §2-10)
+- **DB 커넥션을 쥔 채로 네트워크를 기다린다** → 커넥션 풀이 빠르게 고갈된다 ([트랜잭션 · 락](../database/basics/transaction-and-lock.md) §2-10)
 - **락도 쥐고 있다** → 락 점유 시간이 외부 응답 시간만큼 늘어난다 → **데드락 확률 급증** (§2-7 원칙 1의 정면 위반)
 - **외부 호출이 성공한 뒤 DB가 롤백되면** → 문자는 나갔는데 이력은 없다 → **재시도 시 중복 발송**
 
@@ -191,7 +191,7 @@ reader 로 chunk 크기만큼 읽고 → processor 로 가공 → writer 로 한
 | 한 번에 들고 있는 객체 ↑ → **메모리 ↑** | 메모리 ↓ |
 | 실패 시 롤백 범위 ↑ | 롤백 범위 ↓ |
 
-**→ 그래서 chunk 크기는 성능 손잡이이자 안정성 손잡이다.** OOM([Java](../java/jvm-gc-concurrency.md))과 락 경합([트랜잭션 · 락](../database/transaction-and-lock.md))이 **같은 값 하나로 동시에 움직인다**는 뜻이기도 하다.
+**→ 그래서 chunk 크기는 성능 손잡이이자 안정성 손잡이다.** OOM([Java](../java/jvm-gc-concurrency.md))과 락 경합([트랜잭션 · 락](../database/basics/transaction-and-lock.md))이 **같은 값 하나로 동시에 움직인다**는 뜻이기도 하다.
 
 **그 외 알아둘 것**
 - **재시작(restart)**: `JobRepository`가 실행 이력을 저장해서, 실패한 지점부터 다시 시작할 수 있다
