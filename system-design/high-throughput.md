@@ -61,7 +61,7 @@
 
 **분산 환경에서의 함정** ← 이 지적을 하면 앞서간다
 워커가 5대인데 각자 "초당 100건"을 지키면 **전체로는 500건**이 나간다. 채널사는 500건을 받는다.
-→ **레이트 리밋은 전역이어야 한다.** Redis 카운터나 토큰을 **공유**해야 한다 ([NoSQL](../search-and-nosql/elasticsearch-redis-mongodb.md) §2-3).
+→ **레이트 리밋은 전역이어야 한다.** Redis 카운터나 토큰을 **공유**해야 한다 ([Redis](../datastore/redis.md)).
 
 ### 2-4. 서킷 브레이커 — 왜 빠르게 실패시키나
 
@@ -90,7 +90,7 @@ CLOSED (정상)  --실패율이 임계치 초과-->  OPEN (차단)
 
 **⚠️ 함께 가야 하는 것: 타임아웃**
 서킷 브레이커가 있어도 **타임아웃이 없으면 소용없다.** 무한 대기하면 실패로 카운트도 안 된다.
-→ **connect timeout과 read timeout을 반드시 걸 것** ([네트워크 · OS](../fundamentals/network-and-os.md))
+→ **connect timeout과 read timeout을 반드시 걸 것** ([신뢰성 패턴](../network/reliability-patterns.md) §2-1)
 
 **발송 도메인 적용**: 채널사 A가 OPEN이면 → **대체 채널로 우회**하거나, **큐에 보관했다가 나중에 재시도**한다. "실패 처리"가 아니라 **"지연 처리"**로 가는 게 이 도메인의 정답인 경우가 많다.
 
@@ -119,7 +119,7 @@ CLOSED (정상)  --실패율이 임계치 초과-->  OPEN (차단)
 
 **어디서 중복이 생기나 — 전부 "결과를 모르는" 지점이다**
 1. 클라이언트가 API를 재요청 (응답을 못 받아서)
-2. 큐의 at-least-once 재배달 ([메시징](../messaging/kafka-and-rabbitmq.md) §2-7)
+2. 큐의 at-least-once 재배달 ([Kafka](../messaging/kafka.md) §2-6)
 3. 배치 재실행
 4. 채널사 API 타임아웃 후 재시도 (§2-5)
 
@@ -135,7 +135,7 @@ CLOSED (정상)  --실패율이 임계치 초과-->  OPEN (차단)
 애플리케이션에서 "이미 있나 조회 후 없으면 INSERT"는 **동시에 두 요청이 오면 둘 다 통과한다.** 조회와 INSERT 사이에 틈이 있기 때문이다. **DB 제약만이 그 틈을 없앤다.**
 
 **멱등키를 무엇으로 잡을 것인가**
-- 클라이언트가 주는 경우: `Idempotency-Key` 헤더 ([네트워크 · OS](../fundamentals/network-and-os.md))
+- 클라이언트가 주는 경우: `Idempotency-Key` 헤더 ([신뢰성 패턴](../network/reliability-patterns.md) §2-2)
 - 도메인 키로 만드는 경우: **(고객사 ID, 캠페인 ID, 수신번호, 발송 회차)**
 - ⚠️ **"회차"가 왜 필요한가**: 같은 캠페인을 **일부러 두 번 보내는** 요구가 있다(재발송). 회차가 없으면 정당한 재발송까지 막힌다. **"중복 방지"와 "재발송 허용"을 어떻게 구분할 것인가**는 좋은 되물음이다
 
@@ -158,9 +158,9 @@ CLOSED (정상)  --실패율이 임계치 초과-->  OPEN (차단)
 - 순서가 필요 없으면 → 균등 분산 우선
 - 고객사 단위 순서가 필요하면 → 고객사 ID 키 + **대형 고객사는 별도 처리**
 
-(Kafka 파티션 §[메시징](../messaging/kafka-and-rabbitmq.md) 2-4, ES 샤드 §[NoSQL](../search-and-nosql/elasticsearch-redis-mongodb.md) 2-2(3)이 **전부 같은 원리**다.)
+(Kafka 파티션 §[Kafka](../messaging/kafka.md) 2-3, ES 샤드 §[Elasticsearch](../datastore/elasticsearch.md) §2-3이 **전부 같은 원리**다.)
 
-**⚠️ 여기서 말하는 파티셔닝은 "여러 노드로 나누는 것"이다. 이름이 같은 다른 얘기가 하나 더 있다** — **단일 DB 안에서 테이블을 시간 단위로 쪼개는 테이블 파티셔닝.** 보존 기간이 있는 발송 이력에서는 이쪽이 훨씬 자주 쓰인다(`DROP PARTITION`으로 통째로 버리기). → `[DB 인덱스](../database/b-tree-index.md)` §2-12
+**⚠️ 여기서 말하는 파티셔닝은 "여러 노드로 나누는 것"이다. 이름이 같은 다른 얘기가 하나 더 있다** — **단일 DB 안에서 테이블을 시간 단위로 쪼개는 테이블 파티셔닝.** 보존 기간이 있는 발송 이력에서는 이쪽이 훨씬 자주 쓰인다(`DROP PARTITION`으로 통째로 버리기). → `[DB 인덱스](../database/basics/b-tree-index.md)` §2-12
 
 ### 2-8. 벌크 처리 — 건당을 묶는다
 
