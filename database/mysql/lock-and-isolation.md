@@ -16,9 +16,7 @@
 
 ### 2-1. 기본이 REPEATABLE READ라는 것
 
-공식 문서의 한 줄은 짧다 — *"The default isolation level for InnoDB is REPEATABLE READ."* **왜 그런가는 안 적혀 있다.**
-
-다만 그 옆에 **기계적 사실 하나**가 붙어 있다.
+공식 문서의 한 줄은 짧다 — *"The default isolation level for InnoDB is REPEATABLE READ."* **왜 그런가는 안 적혀 있다.** 다만 그 옆에 **기계적 사실 하나**가 붙어 있다.
 
 > *"Only row-based binary logging is supported with the READ COMMITTED isolation level. If you use READ COMMITTED with `binlog_format=MIXED`, the server automatically uses row-based logging."*
 
@@ -43,7 +41,7 @@
 - **갭 락**: *"a lock on a gap between index records, or a lock on the gap before the first or after the last index record"*
 - **넥스트키 락**: *"a combination of a record lock on the index record and a gap lock on the gap before the index record"*
 
-**구간 표기로 보면 한 번에 들어온다.** 인덱스에 10·11·13·20이 있으면 넥스트키 락이 나눠 갖는 구간은 이렇다.
+**구간 표기로 보면 한 번에 들어온다.** 인덱스에 10·11·13·20이 있으면 넥스트키 락이 나눠 갖는 구간이 이렇게 된다.
 
 ```
 (-∞, 10]   (10, 11]   (11, 13]   (13, 20]   (20, +∞)
@@ -130,9 +128,7 @@ UPDATE send_history SET status='FAILED' WHERE campaign_id=7 AND error_code='TIME
 
 > *"The default setting of interleaved lock mode in MySQL 8.4 reflects the change from statement-based replication to row based replication as the default replication type. Statement-based replication requires the consecutive auto-increment lock mode... whereas row-based replication is not sensitive to the execution order of SQL statements."*
 
-**복제 방식이 락 기본값을 정했다.** §2-1에서 격리 수준과 복제가 묶여 있는 걸 봤는데, **여기서는 그 인과가 문서에 그대로 적혀 있다.**
-
-**AUTO-INC 락의 수명도 특이하다** — *"This lock is normally held to the end of the statement (not to the end of the transaction)"*. 락인데 **트랜잭션이 아니라 문장 단위**다. 트랜잭션이 롤백돼도 이미 소비한 번호는 안 돌아온다.
+**복제 방식이 락 기본값을 정했다.** §2-1에서 격리 수준과 복제가 묶여 있는 걸 봤는데, **여기서는 그 인과가 문서에 그대로 적혀 있다.** 락의 수명도 특이하다 — *"This lock is normally held to the end of the statement (not to the end of the transaction)"*. **트랜잭션이 아니라 문장 단위**라, 롤백해도 이미 소비한 번호는 안 돌아온다.
 
 **실무에서 물리는 곳 셋.**
 
@@ -144,7 +140,7 @@ UPDATE send_history SET status='FAILED' WHERE campaign_id=7 AND error_code='TIME
 
 ### 2-7. 메타데이터 락 — 아무도 안 잠갔는데 ALTER가 막힌다
 
-여기가 실제 장애를 만드는 자리다. **행 락과 완전히 다른 층**에 있다.
+여기가 실제 장애를 만드는 자리이고, **행 락과 완전히 다른 층**에 있다.
 
 > *"To ensure transaction serializability, the server must not permit one session to perform a data definition language (DDL) statement on a table that is used in an uncompleted explicitly or implicitly started transaction in another session."*
 
@@ -230,11 +226,9 @@ UPDATE send_history SET status='FAILED' WHERE campaign_id=7 AND error_code='TIME
 > - [MySQL 17.7.3 Locks Set by Different SQL Statements](https://dev.mysql.com/doc/refman/8.4/en/innodb-locks-set.html) — *"every index record that is scanned... It does not matter whether there are WHERE conditions"*, INSERT가 갭 락이 아닌 인덱스 레코드 락을 건다는 점, **중복 키 에러 시 공유 락과 3세션 데드락 시나리오**, FK 검사가 공유 레코드 락을 걸며 **실패 시에도** 건다는 서술
 > - [MySQL 10.11.4 Metadata Locking](https://dev.mysql.com/doc/refman/8.4/en/metadata-locking.html) — MDL의 목적 원문, 적용 대상(스키마·스토어드 프로그램·테이블스페이스·`GET_LOCK()`), **트랜잭션 끝까지 유지된다는 원문**과 DDL 차단 예시, *"acquire metadata locks one by one... and perform deadlock detection"*
 > - [MySQL 17.6.1.6 AUTO_INCREMENT Handling](https://dev.mysql.com/doc/refman/8.4/en/innodb-auto-increment-handling.html) — 세 모드, **8.4 기본이 2(interleaved)이고 그 이유가 행 기반 복제 전환이라는 원문**, AUTO-INC 락이 **문장 끝까지**(트랜잭션 아님) 유지된다는 서술, simple/bulk/mixed-mode 분류, SBR에서는 0·1을 쓰고 소스·리플리카를 맞추라는 지시
-> - [MySQL 17.7.5 Deadlocks in InnoDB](https://dev.mysql.com/doc/refman/8.4/en/innodb-deadlocks.html) — *"you must still handle the case where a transaction must be retried"*
-> - `lock_wait_timeout` 기본 **31536000초(1년)** 와 적용 범위 — dev.mysql.com 매뉴얼의 `server-system-variables` 항목으로 확인
+> - [MySQL 17.7.5 Deadlocks in InnoDB](https://dev.mysql.com/doc/refman/8.4/en/innodb-deadlocks.html) — *"you must still handle the case where a transaction must be retried"* / `lock_wait_timeout` 기본 **31536000초(1년)** 와 적용 범위는 매뉴얼의 `server-system-variables` 항목으로 확인
 > **미확인**:
 > - **§2-1의 "기본이 RR인 이유"** — 공식 문서에 인과가 없다. 본문은 *RC가 ROW binlog를 강제한다*는 확인된 사실만 제시하고 통설은 통설로 표시했다
-> - `innodb_lock_wait_timeout` 기본값 — 참조한 Deadlocks·InnoDB 파라미터 페이지에서 수치를 확인하지 못해 §2-7 표에서 뺐다([트랜잭션 · 락](../basics/transaction-and-lock.md) §2-7이 50초로 적었으나 그 문서도 출처 대조 전이다)
-> - `lock_wait_timeout` 항목은 8.4 매뉴얼 본문 표를 직접 열어 대조하지 못했다(해당 페이지가 잘려 L 항목에 도달하지 못함)
+> - `innodb_lock_wait_timeout` 기본값 — Deadlocks·InnoDB 파라미터 페이지에서 수치를 확인하지 못해 §2-7 표에서 뺐다([트랜잭션 · 락](../basics/transaction-and-lock.md) §2-7이 50초로 적었으나 그 문서도 출처 대조 전이다). `lock_wait_timeout` 쪽도 **8.4 매뉴얼 본문 표를 직접 열어 대조하지는 못했다**(해당 페이지가 잘려 L 항목에 도달하지 못함)
 > - §2-7의 `performance_schema.metadata_locks` 사용법 · MDL의 락 종류(SHARED_READ 등) 체계 — 대조하지 않았다
 > **미작성**: `SHOW ENGINE INNODB STATUS` 데드락 덤프 읽는 법 · `performance_schema.data_locks` 조회 · 온라인 DDL의 MDL 승격 구간 · `FOR UPDATE NOWAIT`·`SKIP LOCKED`([트랜잭션 · 락](../basics/transaction-and-lock.md) §2-8이 정본) · 외래 키 락의 상세 동작

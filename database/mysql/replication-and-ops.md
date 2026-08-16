@@ -24,9 +24,7 @@ MySQL의 복제 로그는 redo와 **별개 파일인 binlog**다([내구성과 �
 | **`ROW`** (기본) | **바뀐 행의 값** | 로그가 크다. 1건 UPDATE가 100만 행이면 100만 행이 기록된다 |
 | `MIXED` | 기본은 문장, 위험할 때만 행 | 판정을 서버에 맡긴다 |
 
-공식 문서가 기본값을 *"In row-based logging (the default), the source writes events to the binary log that indicate how individual table rows are affected."*로 적는다.
-
-**왜 문장이 위험한가** — [복제와 파티셔닝](../basics/replication-and-partitioning.md) §2-2의 "복제는 재생"이라는 전제 때문이다. 재생이 원본과 같은 결과를 내야 하는데, `NOW()` · `RAND()` · `UUID()` · 순서 의존 `LIMIT` 갱신은 **두 번 실행하면 다른 결과**가 나온다. MySQL 자신도 이런 문장에 *"Statement may not be safe to log in statement format"* 경고를 낸다.
+공식 문서의 표현은 *"In row-based logging (the default), the source writes events to the binary log that indicate how individual table rows are affected."*다. **왜 문장이 위험한가** — [복제와 파티셔닝](../basics/replication-and-partitioning.md) §2-2의 "복제는 재생"이라는 전제 때문이다. 재생이 원본과 같은 결과를 내야 하는데, `NOW()` · `RAND()` · `UUID()` · 순서 의존 `LIMIT` 갱신은 **두 번 실행하면 다른 결과**가 나온다. MySQL 자신도 이런 문장에 *"Statement may not be safe to log in statement format"* 경고를 낸다.
 
 ```sql
 UPDATE send_reserve SET status='SENDING', picked_at=NOW() WHERE status='READY' LIMIT 1000;
@@ -102,7 +100,7 @@ CREATE TABLE send_history (
 
 ### 2-5. Online DDL — `INSTANT` / `INPLACE` / `COPY`
 
-`ALTER TABLE`에 `ALGORITHM`을 명시할 수 있다. **세 단계의 차이는 "테이블을 다시 쓰느냐"다.**
+`ALTER TABLE`에 `ALGORITHM`을 명시할 수 있고, **세 단계의 차이는 "테이블을 다시 쓰느냐"다.**
 
 | | 하는 일 | 동시 DML | 비용 |
 |---|---|---|---|
@@ -116,7 +114,7 @@ CREATE TABLE send_history (
 
 **발송 이력 20억 건에서 `id`가 `INT` 상한(21억)에 다가왔다고 하자.** `MODIFY id BIGINT`는 `COPY`뿐이다 — 20억 행 복사에 인덱스 재생성, 그동안 쓰기 불가. **여기가 대량 발송 서비스에서 실제로 터지는 자리**이고, 그래서 §2-6의 외부 도구가 필요해진다.
 
-**"온라인"이어도 메타데이터 락은 필요하다 — 이게 두 번째 함정이다.**
+**"온라인"이어도 메타데이터 락은 필요하다 — 두 번째 함정이다.**
 
 > *"In the commit table definition phase, the metadata lock is upgraded to exclusive to evict the old table definition and commit the new one."* / *"An online DDL operation may have to wait for concurrent transactions that hold metadata locks on the table ... Additionally, a pending exclusive metadata lock requested by an online DDL operation blocks subsequent transactions on the table."*
 
@@ -164,13 +162,7 @@ CREATE TABLE send_history (
 | `utf8mb4_unicode_ci` | UCA 4.0.0 | 확장·축약·무시 문자 지원(독일어 `ß = ss`) | `PAD SPACE` |
 | `utf8mb4_general_ci` | UCA 아님(레거시) | *"only one-to-one comparisons between characters"* — `ß = s` | `PAD SPACE` |
 
-**`NO PAD` 차이가 조용한 사고를 만든다.** `PAD SPACE` 계열은 비교할 때 **끝의 공백을 무시**해서 `'홍길동'`과 `'홍길동 '`이 같다고 판정한다. `NO PAD`는 **다르다고 판정**한다.
-
-```
-수신자명 UNIQUE 제약이 있는 테이블
-  utf8mb4_general_ci (PAD SPACE) : '홍길동 ' 삽입 → 중복 에러
-  utf8mb4_0900_ai_ci (NO PAD)    : '홍길동 ' 삽입 → 성공, 서로 다른 행
-```
+**`NO PAD` 차이가 조용한 사고를 만든다.** `PAD SPACE` 계열은 비교할 때 **끝의 공백을 무시**해서 `'홍길동'`과 `'홍길동 '`을 같다고 보고, `NO PAD`는 **다르다고 본다.** 수신자명에 `UNIQUE`가 걸려 있으면 `'홍길동 '` 삽입이 **전자에서는 중복 에러, 후자에서는 성공**이다 — 같은 스키마가 이사 후에 다르게 동작한다.
 
 **진짜 문제는 섞였을 때다.** 테이블마다 콜레이션이 다르면 **조인 조건에서 `Illegal mix of collations` 에러**가 나거나, 암묵적 변환이 일어나 **인덱스를 못 타게 된다** — [DB 인덱스](../basics/b-tree-index.md) §2-6의 암묵적 형변환과 **같은 함정의 문자열 판**이다.
 
@@ -196,8 +188,7 @@ CREATE TABLE send_history (
   벽시계 + 타임존을 따로 저장   → DATETIME(예약 시각) + VARCHAR(타임존 ID)
 ```
 
-- **2038 문제가 실제 제약이다.** 장기 보관 이력이나 만료일에 `TIMESTAMP`를 쓰면 **범위를 넘는 값이 안 들어간다**. 둘 다 **마이크로초(6자리)**까지 지원하니, 같은 초에 수천 건이 쌓이는 발송 로그는 정밀도를 명시해야 정렬이 안정된다
-- 기본형은 **UTC 시점으로 통일하고 표시에서만 변환**하는 것이다. 단 위 예약 발송처럼 **"벽시계 약속"이 원본 의도**인 경우는 예외다
+**기본형은 UTC 시점으로 통일하고 표시에서만 변환하는 것**이고, 위 예약 발송처럼 **"벽시계 약속"이 원본 의도**인 경우가 예외다. 그리고 **2038 문제가 실제 제약**이라 장기 보관 이력이나 만료일에는 `TIMESTAMP`를 못 쓴다. 둘 다 **마이크로초(6자리)**까지 지원하니, 같은 초에 수천 건이 쌓이는 발송 로그는 정밀도를 명시해야 정렬이 안정된다.
 
 ### 2-9. 그래서 갈라지는 것들
 
