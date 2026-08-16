@@ -26,6 +26,13 @@ B+Tree가 왜 B-Tree가 아닌지, InnoDB의 락이 왜 인덱스에 걸리는�
 - [동시성 제어 이론 — 격리 수준은 어디서 나왔나](database/basics/concurrency-theory.md)
 - [데이터 모델링 — 키와 함수 종속](database/basics/data-modeling.md)
 - [정규화 — 쪼개는 규칙과 되돌리는 판단](database/basics/normalization.md)
+- [전문 검색 — LIKE는 왜 인덱스를 못 타나](database/basics/text-search.md)
+
+**MySQL**
+- [InnoDB 내부 — 버퍼 풀 위에 얹힌 것들](database/mysql/innodb-internals.md)
+- [락과 격리 — 넥스트키 락과 MDL](database/mysql/lock-and-isolation.md)
+- [인덱스와 옵티마이저 — MySQL 고유 손잡이](database/mysql/index-and-optimizer.md)
+- [복제와 운영 — binlog·GTID·Online DDL](database/mysql/replication-and-ops.md)
 
 **PostgreSQL**
 - [MVCC와 VACUUM — 청소가 왜 필수 업무인가](postgresql/mvcc-and-vacuum.md)
@@ -52,6 +59,7 @@ B+Tree가 왜 B-Tree가 아닌지, InnoDB의 락이 왜 인덱스에 걸리는�
 
 **Fundamentals**
 - [자료구조](fundamentals/data-structures.md)
+- [알고리즘 — 복잡도가 아니라 전제로 고른다](fundamentals/algorithms.md)
 
 **OS**
 - [메모리와 페이징 — 없는 메모리를 있는 척하는 법](os/memory-and-paging.md)
@@ -78,14 +86,14 @@ B+Tree가 왜 B-Tree가 아닌지, InnoDB의 락이 왜 인덱스에 걸리는�
 ### 채울 것
 
 - [x] ~~**전송 계층 보강** — 혼잡 제어·흐름 제어·TIME_WAIT~~ (RFC 5681 대조 완료)
-- [ ] **프로세스 스케줄링** — CPU 스케줄링 알고리즘·선점/비선점. *"컨텍스트 스위칭이 비싸다"를 전제로 쓰는데 스케줄러가 언제 왜 전환하는지가 없다*
-- [ ] **동기화 원시타입** — 임계 구역·뮤텍스 vs 세마포어·모니터. *DB 락을 다루면서 그 원형인 OS 동기화가 없다*
+- [x] ~~**프로세스 스케줄링**~~ (man7 sched(7) 등 대조 완료)
+- [x] ~~**동기화 원시타입**~~ (pthreads·futex 문서 대조 완료)
 - [x] ~~**복제와 파티셔닝** — 복제 지연·읽기 분산·페일오버~~ (PostgreSQL 공식 문서 대조 완료)
-- [ ] **RDB 전문 검색** — `LIKE '%..%'`가 인덱스를 못 타는 이유·n-gram·형태소
-- [ ] **MySQL 4편** — InnoDB 내부 / 갭 락·MDL / Full-Text·옵티마이저 / binlog·Online DDL
+- [x] ~~**RDB 전문 검색**~~ (MySQL·PostgreSQL 공식 문서 8개 절 대조 완료)
+- [x] ~~**MySQL 4편**~~ (공식 문서 대조 완료)
 - [x] ~~**PostgreSQL 4편**~~ (공식 문서 8개 절 대조 완료)
-- [ ] **응용 계층 보강** — DNS·HTTP/2·HTTP/3·CDN
-- [ ] **알고리즘** — 탐색·그래프·DP. *현재 `자료구조` 문서에 정렬 한 절뿐이라 제목에서 "알고리즘"을 뺐다*
+- [x] ~~**응용 계층 보강**~~ (RFC 대조 완료)
+- [x] ~~**알고리즘** — 탐색·그래프·DP~~ (별도 편으로 분리)
 - [ ] **미확인 항목 해소** — 각 문서의 `미확인` 칸을 공식 문서로 대조
 
 ### 다루지 않기로 한 것

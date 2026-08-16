@@ -13,8 +13,14 @@
 * [동시성 제어 이론 — 격리 수준은 어디서 나왔나](database/basics/concurrency-theory.md)
 * [데이터 모델링 — 키와 함수 종속](database/basics/data-modeling.md)
 * [정규화 — 쪼개는 규칙과 되돌리는 판단](database/basics/normalization.md)
+* [전문 검색 — LIKE는 왜 인덱스를 못 타나](database/basics/text-search.md)
 
 ## Database — MySQL
+
+* [InnoDB 내부 — 버퍼 풀 위에 얹힌 것들](database/mysql/innodb-internals.md)
+* [락과 격리 — 넥스트키 락과 MDL](database/mysql/lock-and-isolation.md)
+* [인덱스와 옵티마이저 — MySQL 고유 손잡이](database/mysql/index-and-optimizer.md)
+* [복제와 운영 — binlog·GTID·Online DDL](database/mysql/replication-and-ops.md)
 
 ## Database — PostgreSQL
 
@@ -50,6 +56,7 @@
 ## Fundamentals
 
 * [자료구조](fundamentals/data-structures.md)
+* [알고리즘 — 복잡도가 아니라 전제로 고른다](fundamentals/algorithms.md)
 
 ## OS
 
