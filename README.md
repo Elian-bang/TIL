@@ -27,6 +27,12 @@ B+Tree가 왜 B-Tree가 아닌지, InnoDB의 락이 왜 인덱스에 걸리는�
 - [데이터 모델링 — 키와 함수 종속](database/basics/data-modeling.md)
 - [정규화 — 쪼개는 규칙과 되돌리는 판단](database/basics/normalization.md)
 
+**PostgreSQL**
+- [MVCC와 VACUUM — 청소가 왜 필수 업무인가](postgresql/mvcc-and-vacuum.md)
+- [힙과 인덱스 — 인덱스는 왜 힙을 못 벗어나나](postgresql/heap-and-index.md)
+- [락과 타입 — 갭 락 없이 팬텀을 막는 법](postgresql/lock-and-types.md)
+- [복제와 운영 — WAL 하나로 다 하는 대신 치르는 것](postgresql/replication-and-ops.md)
+
 **Messaging**
 - [메시징 기초 — 큐를 왜 쓰고, 무엇을 고를 것인가](messaging/basics.md)
 - [Kafka — 큐가 아니라 로그다](messaging/kafka.md)
@@ -77,7 +83,7 @@ B+Tree가 왜 B-Tree가 아닌지, InnoDB의 락이 왜 인덱스에 걸리는�
 - [x] ~~**복제와 파티셔닝** — 복제 지연·읽기 분산·페일오버~~ (PostgreSQL 공식 문서 대조 완료)
 - [ ] **RDB 전문 검색** — `LIKE '%..%'`가 인덱스를 못 타는 이유·n-gram·형태소
 - [ ] **MySQL 4편** — InnoDB 내부 / 갭 락·MDL / Full-Text·옵티마이저 / binlog·Online DDL
-- [ ] **PostgreSQL 4편** — MVCC와 VACUUM / 힙과 인덱스(GIN·GiST·BRIN) / SSI·jsonb / 논리 복제·PgBouncer
+- [x] ~~**PostgreSQL 4편**~~ (공식 문서 8개 절 대조 완료)
 - [ ] **응용 계층 보강** — DNS·HTTP/2·HTTP/3·CDN
 - [ ] **알고리즘** — 탐색·그래프·DP. *현재 `자료구조` 문서에 정렬 한 절뿐이라 제목에서 "알고리즘"을 뺐다*
 - [ ] **미확인 항목 해소** — 각 문서의 `미확인` 칸을 공식 문서로 대조

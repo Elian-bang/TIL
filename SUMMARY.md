@@ -18,6 +18,11 @@
 
 ## Database — PostgreSQL
 
+* [MVCC와 VACUUM — 청소가 왜 필수 업무인가](postgresql/mvcc-and-vacuum.md)
+* [힙과 인덱스 — 인덱스는 왜 힙을 못 벗어나나](postgresql/heap-and-index.md)
+* [락과 타입 — 갭 락 없이 팬텀을 막는 법](postgresql/lock-and-types.md)
+* [복제와 운영 — WAL 하나로 다 하는 대신 치르는 것](postgresql/replication-and-ops.md)
+
 ## Messaging
 
 * [메시징 기초 — 큐를 왜 쓰고, 무엇을 고를 것인가](messaging/basics.md)
