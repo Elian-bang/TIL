@@ -61,7 +61,7 @@ SELECT * FROM send_reserve
 
 ### 2-3. 갭 락은 "억제 전용"이다
 
-여기가 가장 많이 오해되는 지점이다. 공식 문서가 못을 박는다.
+여기가 가장 많이 오해되는 지점이고, 공식 문서가 못을 박는다.
 
 > *"Gap locks in InnoDB are 'purely inhibitive', which means that their only purpose is to prevent other transactions from inserting to the gap. Gap locks can co-exist. A gap lock taken by one transaction does not prevent another transaction from taking a gap lock on the same gap. There is no difference between shared and exclusive gap locks."*
 
@@ -69,9 +69,7 @@ SELECT * FROM send_reserve
 
 > **그래서 "갭 락 때문에 데드락이 난다"는 절반만 맞다.** 갭 락 혼자서는 아무도 안 막으므로 순환을 못 만든다. 데드락을 만드는 건 **넥스트키 락에 같이 들어 있는 레코드 락**과, 아래의 **insert intention lock**이다.
 
-**INSERT 쪽에도 대칭 장치가 있다.**
-
-> *"An insert intention lock is a type of gap lock set by INSERT operations prior to row insertion... multiple transactions inserting into the same index gap need not wait for each other if they are not inserting at the same position within the gap."*
+**INSERT 쪽에도 대칭 장치가 있다** — *"An insert intention lock is a type of gap lock set by INSERT operations prior to row insertion... multiple transactions inserting into the same index gap need not wait for each other if they are not inserting at the same position within the gap."*
 
 **같은 갭에 서로 다른 값을 넣는 INSERT들은 안 기다린다.** 여기까지는 전부 "최대한 안 막게" 설계돼 있다.
 
@@ -101,9 +99,7 @@ UPDATE send_history SET status='FAILED' WHERE campaign_id=7 AND error_code='TIME
 
 ### 2-5. 의도 락 — 이론의 InnoDB 구현
 
-[동시성 제어 이론](../basics/concurrency-theory.md) §2-5에서 **왜 의도 락이 필요한지**를 봤다. InnoDB의 구현은 단출하다 — **테이블 수준에 IS와 IX 두 종뿐**이다.
-
-> *"An intention shared lock (IS) indicates that a transaction intends to set a shared lock on individual rows in a table."* / *"SELECT ... FOR SHARE sets an IS lock, and SELECT ... FOR UPDATE sets an IX lock."*
+[동시성 제어 이론](../basics/concurrency-theory.md) §2-5에서 **왜 의도 락이 필요한지**를 봤다. InnoDB의 구현은 단출하다 — **테이블 수준에 IS와 IX 두 종뿐**이고, *"SELECT ... FOR SHARE sets an IS lock, and SELECT ... FOR UPDATE sets an IX lock."*
 
 | | X | IX | S | IS |
 |---|---|---|---|---|
@@ -112,9 +108,7 @@ UPDATE send_history SET status='FAILED' WHERE campaign_id=7 AND error_code='TIME
 | **S** | 충돌 | 충돌 | 호환 | 호환 |
 | **IS** | 충돌 | **호환** | 호환 | 호환 |
 
-**표에서 읽어야 할 것은 IX-IX가 호환이라는 칸 하나다.** 서로 다른 행을 잠그는 트랜잭션들은 테이블 수준에서 **전혀 안 부딪힌다.** 의도 락은 실무에서 **거의 보이지 않는 게 정상**이고, 걸리는 순간은 누군가 **테이블 전체 락**(`LOCK TABLES ... WRITE` 등)을 요청했을 때다.
-
-> ⚠️ **"ALTER가 막혔다"를 의도 락으로 설명하면 틀린다.** DDL을 막는 건 이 테이블 락 계열이 아니라 **완전히 다른 층에 있는 메타데이터 락**이다(§2-7). InnoDB의 락과 서버 층의 락은 별개의 장치다.
+**표에서 읽어야 할 것은 IX-IX가 호환이라는 칸 하나다.** 서로 다른 행을 잠그는 트랜잭션들은 테이블 수준에서 **전혀 안 부딪힌다.** 의도 락은 실무에서 **거의 보이지 않는 게 정상**이고, 걸리는 순간은 누군가 **테이블 전체 락**(`LOCK TABLES ... WRITE` 등)을 요청했을 때다. 그리고 ⚠️ **"ALTER가 막혔다"를 의도 락으로 설명하면 틀린다** — DDL을 막는 건 이 테이블 락 계열이 아니라 **완전히 다른 층에 있는 메타데이터 락**이다(§2-7).
 
 ### 2-6. AUTO-INC 락 — 채번은 연속이 아니다
 
@@ -169,6 +163,8 @@ UPDATE send_history SET status='FAILED' WHERE campaign_id=7 AND error_code='TIME
 **둘이 다른 변수라는 걸 놓치면 진단이 어긋난다.** 행 락 타임아웃을 아무리 짧게 잡아도 **MDL 대기는 그 설정과 무관**하고, MDL 쪽 기본값은 **사실상 무한**이다. 게다가 타임아웃은 **락 하나마다 따로** 적용되므로 문장 하나가 그 값보다 오래 막힐 수도 있다. (문서에 *"Statements acquire metadata locks one by one... and perform deadlock detection in the process"*도 있다 — **MDL에도 데드락 감지가 있다.**)
 
 > **대책은 셋이고 순서가 있다.** ① **DDL 전에 열린 트랜잭션이 없는지 확인한다**(`performance_schema.metadata_locks`). ② **DDL 세션에서만 `lock_wait_timeout`을 짧게**(수 초) 잡는다 — 못 잡으면 빨리 실패하는 게 낫다. ③ 근본은 [트랜잭션 · 락](../basics/transaction-and-lock.md) §2-7의 그 조언이다 — **트랜잭션 안에서 외부 API를 기다리지 마라.** 그 습관이 행 락 사고와 MDL 사고를 동시에 만든다.
+>
+> **온라인 DDL이 이 MDL을 어느 구간에서 어떻게 요구하는지**는 [복제와 운영](replication-and-ops.md) §2-5가 정본이다.
 
 ### 2-8. 중복 키 에러가 만드는 데드락
 
@@ -176,7 +172,7 @@ UPDATE send_history SET status='FAILED' WHERE campaign_id=7 AND error_code='TIME
 
 > *"If a duplicate-key error occurs, a shared lock on the duplicate index record is set. This use of a shared lock can result in deadlock should there be multiple sessions trying to insert the same row if another session already has an exclusive lock."*
 
-**중복 키로 실패한 INSERT가 락을 놓는 게 아니라 공유 락을 잡는다**는 게 반직관적이다.
+**실패한 INSERT가 락을 놓는 게 아니라 공유 락을 잡는다**는 게 반직관적이다.
 
 ```
 세션 1: INSERT dedup_key='A'  → 배타 락 획득
