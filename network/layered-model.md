@@ -79,9 +79,13 @@ OSI 7계층                    TCP/IP 4계층 (실제)
 1 물리      ┴──────→        링크 (Link)
 ```
 
+4계층이라는 숫자는 RFC 1122에서 온다. 인터넷 호스트가 뭘 구현해야 하는지 정한 이 문서는 *"The protocol layers used in the Internet architecture are as follows"*라고 쓰고 응용·전송·인터넷·링크 넷을 나열한 뒤, 호스트가 *"typically must implement at least one protocol from each layer"* 하도록 요구한다.
+
+교재마다 5계층으로 세는 이유도 같은 문서에서 보인다. RFC 1122는 물리 계층에 아예 이름을 붙이지 않는다. 맨 아래를 *"To communicate on its directly-connected network, a host must implement the communication protocol used to interface to that network. We call this a link layer or media-access layer protocol."*라고 정의하고 끝낸다. 호스트가 구현할 프로토콜을 규정하는 문서였으니 케이블과 전파는 애초에 관심 밖이었다. 링크와 물리를 갈라 5계층으로 세는 교재가 틀린 게 아니라, RFC 1122 기준으로 세면 4개인 것이다.
+
 5·6계층이 사라진 게 핵심이다. OSI는 "세션 관리"와 "표현 변환"이 독립된 층으로 분리되리라 봤는데, 실제로는 각 응용 프로토콜이 자기 방식으로 알아서 처리했다. HTTP는 자기 안에 세션 개념(쿠키)을 갖고, 압축(`Content-Encoding`)도 자기가 한다.
 
-> 그래서 "TLS는 몇 계층인가"에 깔끔한 답이 없다. 표현 계층(6)이라고도 하고, TCP 위에서 동작하니 4.5계층이라고도 한다. 모델이 현실을 다 담지 못한다는 증거이지 누가 틀린 게 아니다. 면접에서 이 질문이 나오면 "OSI 기준으로는 6, 실제 구현에서는 전송과 응용 사이"라고 답하는 편이 정확하다.
+> 그래서 "TLS는 몇 계층인가"에 깔끔한 답이 없다. 표현 계층(6)이라고도 하고, TCP 위에서 동작하니 4.5계층이라고도 한다. 정작 RFC 8446은 계층 번호를 말하지 않고 아래에 무엇이 있어야 하는지만 규정한다. *"the only requirement from the underlying transport is a reliable, in-order data stream"*. 그 요구를 만족하는 것이 TCP인지 다른 무엇인지는 TLS의 관심사가 아니다. 모델이 현실을 다 담지 못한다는 증거이지 누가 틀린 게 아니다. 면접에서 이 질문이 나오면 "OSI 기준으로는 6, 실제 구현에서는 전송과 응용 사이"라고 답하는 편이 정확하다.
 
 그럼 왜 아직도 7계층을 배우나. 공통 어휘로 쓰이기 때문이다. "L4에서 끊겼다", "L7 라우팅" 같은 말이 업계 표준어다. 모델이 실제 구현을 서술하지 못해도 대화의 좌표계로는 여전히 작동한다.
 
@@ -120,7 +124,15 @@ OSI 7계층                    TCP/IP 4계층 (실제)
 
 ---
 
-> **기준 버전**: 특정 구현 버전에 의존하지 않는 모델 수준 서술
-> **확인한 출처**: 없음 — 이 문서는 아직 공식 문서 대조를 거치지 않았다
-> **미확인**: TCP/IP 모델을 4계층으로 볼지 5계층으로 볼지는 교재마다 다르다(RFC 1122는 4계층). 본문은 4계층 기준이며 이 선택의 근거를 원문으로 대조하지 않았다
+> **기준 버전**: RFC 1122(Requirements for Internet Hosts) · RFC 8446(TLS 1.3) 기준. OSI 쪽은 특정 구현 버전에 의존하지 않는 모델 수준 서술
+> **확인한 출처**:
+> - [RFC 1122](https://www.rfc-editor.org/rfc/rfc1122.html) §1.1.3 — "The protocol layers used in the Internet architecture are as follows"와 응용·전송·인터넷·링크 네 계층, "A host typically must implement at least one protocol from each layer", 링크 계층의 정의 문장("We call this a link layer or media-access layer protocol"), 물리 계층을 이름 붙이지 않는다는 사실, IP가 "a connectionless or datagram internetwork service, providing no end-to-end delivery guarantees"라는 서술(§2-2·§2-4)
+> - [RFC 8446](https://www.rfc-editor.org/rfc/rfc8446.html) §1 — "the only requirement from the underlying transport is a reliable, in-order data stream"(§2-4 TLS 각주)
+> **미확인**:
+> - **OSI 7계층의 층별 정의**(§2-2 표) — 원전은 ISO/IEC 7498-1(= ITU-T X.200)이다. ISO 페이지가 403을 돌려주고 ITU 쪽도 본문을 받지 못해 일곱 층의 이름과 책임을 원문으로 대조하지 못했다. 표는 통용되는 서술이다
+> - **세션·표현 계층이 응용에 흡수됐다는 것**(§2-4) — RFC 1122가 그 둘을 처음부터 두지 않았다는 사실까지만 확인했다. OSI가 분리를 "예측했다"는 서술은 7498-1을 못 봐서 대조하지 못했다
+> - **OSI와 TCP/IP가 경쟁했다는 역사 서술**(§2-4) — 널리 통용되는 이야기이고 1차 자료로 확인하지 않았다
+> - **TLS를 표현 계층(6)에 대응시키는 관례**(§2-2·§2-4) — 관례일 뿐 규정 문서가 없다. RFC 8446은 계층 번호를 말하지 않는다
+> - **L4/L7 로드밸런서의 동작과 비용 비교**(§2-5) — 제품 문서를 대조하지 않았다. §2-3의 캡슐화에서 따라 나오는 추론이다
+> - **장애 증상과 의심 계층 대응표**(§2-5) — 실무 감각이고 근거 문서는 없다
 > **미작성**: 각 계층의 대표 프로토콜 상세 · 스위치와 라우터의 동작 · ARP · MTU와 단편화

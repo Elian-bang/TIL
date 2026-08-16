@@ -218,6 +218,8 @@ SELECT * FROM send_history WHERE receiver_phone = '010-...';
 ---
 
 > **기준 버전**: PostgreSQL 17 · MySQL 8.4
-> **확인한 출처**: [PostgreSQL 27.2 Log-Shipping Standby Servers](https://www.postgresql.org/docs/current/warm-standby.html) — `synchronous_commit`의 `remote_write` / `on` / `remote_apply`가 각각 어디까지 기다리는지, `remote_apply`가 *"인과 일관성을 갖춘 로드 밸런싱을 허용한다"*는 서술, 그리고 **동기 스탠바이가 죽으면 커밋이 완료되지 않을 수 있다**는 명시
-> **미확인**: MySQL binlog 포맷 기본값 · 반동기 복제의 정확한 보장 범위 · `Seconds_Behind_Master`의 알려진 부정확성(널리 알려진 사실이나 공식 문서로 대조하지 않았다) · 파티션 키가 유니크 키에 포함돼야 하는 제약의 정확한 문구 · 재생이 기본적으로 직렬이라는 서술(두 엔진 다 병렬 재생 옵션이 있으나 확인하지 않았다)
+> **확인한 출처**:
+> - [MySQL 19.2.1 Replication Formats](https://dev.mysql.com/doc/refman/8.4/en/replication-formats.html) — **행 기반이 기본**(*"In row-based logging (the default)"*)이라는 서술과 세 포맷의 동작 차이. [MySQL 복제와 운영](../mysql/replication-and-ops.md)을 쓰면서 대조한 것을 옮겨 왔다
+> - [PostgreSQL 27.2 Log-Shipping Standby Servers](https://www.postgresql.org/docs/current/warm-standby.html) — `synchronous_commit`의 `remote_write` / `on` / `remote_apply`가 각각 어디까지 기다리는지, `remote_apply`가 *"인과 일관성을 갖춘 로드 밸런싱을 허용한다"*는 서술, 그리고 **동기 스탠바이가 죽으면 커밋이 완료되지 않을 수 있다**는 명시
+> **미확인**: 반동기 복제의 정확한 보장 범위 · `Seconds_Behind_Master`의 알려진 부정확성(널리 알려진 사실이나 공식 문서로 대조하지 않았다) · 파티션 키가 유니크 키에 포함돼야 하는 제약의 정확한 문구 · 재생이 기본적으로 직렬이라는 서술(두 엔진 다 병렬 재생 옵션이 있으나 확인하지 않았다)
 > **미작성**: 다중 소스 복제 · 순환 복제 · 지연 리플리카(delayed replica) · 온라인 재파티셔닝

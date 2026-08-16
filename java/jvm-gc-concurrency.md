@@ -56,6 +56,8 @@ Young 영역의 GC는 **복사(copying) 방식**이다. 살아남은 객체를 �
 
 부수 효과가 더 중요하다. 복사하면서 객체를 한쪽 끝부터 차곡차곡 쌓기 때문에 **단편화가 생기지 않는다.** 그래서 새 객체 할당이 포인터를 앞으로 미는 것만큼 싸다(bump-the-pointer).
 
+> ⚠️ 위 그림은 Eden·S0·S1이 연속된 공간인 모델이다. **기본 GC인 G1에서는 연속 공간이 아니다.** Oracle 문서는 G1의 young 영역을 두고 *"these regions are typically laid out in a noncontiguous pattern in memory"*라고 적는다. 나이에 따라 survivor 또는 old로 복사한다는 원리는 그대로다. *"Objects of the young generation (eden and survivor regions) are copied into survivor or old regions, depending on their age."*
+
 
 #### (3) GC 알고리즘은 왜 계속 바뀌나
 
@@ -63,11 +65,16 @@ Young 영역의 GC는 **복사(copying) 방식**이다. 살아남은 객체를 �
 
 | GC | 아이디어 | 언제 |
 |---|---|---|
-| Serial / Parallel | 멈추고 여러 스레드로 빠르게 치운다 | 처리량 우선, 작은 힙 |
-| **G1** (Java 9+ 기본) | 힙을 **리전(region)** 으로 잘게 쪼개고, **쓰레기가 많은 리전부터** 수집 (Garbage First) | 범용. **목표 정지 시간**(`MaxGCPauseMillis`) 지정 가능 |
-| **ZGC / Shenandoah** | 대부분의 작업을 **애플리케이션과 동시에** 수행 | 대용량 힙에서 **정지 수 ms** |
+| Serial | 한 스레드로 전부 처리 | 단일 프로세서, **작은 데이터셋(대략 100MB 이하)** |
+| Parallel | 멈추고 여러 스레드로 빠르게 치운다 | 처리량 우선(throughput collector) |
+| **G1** (JDK 21 기본) | 힙을 **리전(region)** 으로 잘게 쪼개고, **쓰레기가 많은 리전부터** 수집 (Garbage First) | 범용. 목표 정지 시간(`MaxGCPauseMillis`)을 걸어 둘 수 있다 |
+| **ZGC** | 대부분의 작업을 **애플리케이션과 동시에** 수행 | 지연이 우선일 때. **정지 1ms 미만**, 대신 처리량을 조금 내준다 |
 
-**G1이 리전을 쓰는 이유**: 기존 방식은 Young/Old가 연속된 큰 덩어리라서, Old를 치우려면 그 전체를 봐야 했다 → 힙이 클수록 STW가 길어진다. 리전으로 쪼개면 "이번엔 이 리전 몇 개만" 처리할 수 있다 → 정지 시간을 예측하고 제어할 수 있다.
+Oracle 문서는 기본값을 *"G1 is selected by default on most hardware and operating system configurations"*라고 적는다. 정지 시간 목표는 보장이 아니라 확률이라는 것도 문서에 그렇게 쓰여 있다. G1은 *"provides the capability to meet a pause-time goal with high probability, while achieving high throughput"*이고, ZGC는 *"provides max pause times under a millisecond, but at the cost of some throughput"*이다.
+
+**G1이 리전을 쓰는 이유**: 기존 방식은 Young/Old가 연속된 큰 덩어리라서, Old를 치우려면 그 전체를 봐야 했다 → 힙이 클수록 STW가 길어진다. 리전으로 쪼개면 "이번엔 이 리전 몇 개만" 처리할 수 있다 → 정지 시간을 예측하고 제어할 수 있다. 문서 표현으로는 *"A region is the unit of memory allocation and memory reclamation"*이고, 이름의 유래는 *"G1 reclaims space in the most efficient areas first (that is the areas that are mostly filled with garbage, therefore the name)"*다.
+
+> Shenandoah은 이 표에서 뺐다. **Oracle JDK 21의 수집기 목록은 Serial · Parallel · G1 · ZGC 넷뿐**이고 Shenandoah은 거기 없다. 배포판에 따라 제공 여부가 갈리므로 "ZGC / Shenandoah"로 묶어 말하면 부정확하다.
 
 ### 2-3. GC가 있는데 메모리는 왜 새나
 
@@ -113,12 +120,17 @@ GC는 GC Root에서 도달 가능한 객체를 살아 있다고 판단한다. �
 **충돌이 많으면 리스트가 길어지고 → 최악 O(n)** 이 된다. (해시 충돌을 의도적으로 만드는 DoS 공격도 있었다)
 
 **Java 8의 개선: treeify**
-- 한 버킷의 노드가 **8개 이상**이고 테이블 크기가 64 이상이면 → 레드-블랙 트리로 전환
+- 한 버킷에 노드가 **8개 이상**인 상태에서 원소를 더 넣으면 → 레드-블랙 트리로 전환(`TREEIFY_THRESHOLD = 8`)
+- 단, **테이블 크기가 64 미만이면 트리로 가지 않고 resize로 푼다**(`MIN_TREEIFY_CAPACITY = 64`). 테이블이 작아서 몰린 것과 해시가 나빠서 몰린 것은 처방이 다르기 때문이다
 - 최악이 O(n)에서 O(log n)으로 완화된다
-- 다시 줄어들면(6개 이하) 리스트로 되돌린다
+- 되돌리는 조건은 "줄어들면"이 아니다. **resize로 버킷을 쪼갤 때** 쪼갠 결과가 6개 이하면 리스트로 되돌린다(`UNTREEIFY_THRESHOLD = 6`)
 - 기본 용량 16, load factor 0.75 → 12개가 차면 테이블을 2배로 늘리고 **전부 재배치(resize)** 한다
 
-> **왜 load factor가 0.75인가**: 낮으면 공간 낭비, 높으면 충돌 증가. 시간과 공간의 타협점으로 경험적으로 정해진 값이다.
+각 상수에 붙은 주석이 그대로 근거다. 8은 *"Bins are converted to trees when adding an element to a bin with at least this many nodes"*, 64는 *"The smallest table capacity for which bins may be treeified. (Otherwise the table is resized if too many nodes in a bin.)"*, 6은 *"The bin count threshold for untreeifying a (split) bin during a resize operation."*다.
+
+> ⚠️ **이 임계값들은 공개 계약이 아니다.** `HashMap` 자바독에는 트리 전환이 아예 안 나오고, 8·64·6은 OpenJDK 구현 소스의 상수다. 면접에서 말할 때도 "구현 세부"라고 붙이는 편이 정확하다. 자바독이 보장하는 건 여기까지다. *"When the number of entries in the hash table exceeds the product of the load factor and the current capacity, the hash table is rehashed ... so that the hash table has approximately twice the number of buckets."*
+
+> **왜 load factor가 0.75인가**: 자바독은 시간과 공간의 절충이라고만 말한다. *"the default load factor (.75) offers a good tradeoff between time and space costs. Higher values decrease the space overhead but increase the lookup cost"*. 올리면 공간은 아끼고 조회가 비싸진다는 방향만 문서에 있고, 왜 하필 0.75인지의 유도는 없다.
 
 #### `equals()` / `hashCode()` 계약, 왜 같이 재정의해야 하나
 
@@ -158,7 +170,9 @@ hashCode로 버킷을 먼저 찾고, 그 안에서 equals로 비교하기 때문
 3. 큐도 찼다                         → maximumPoolSize 까지 새 스레드
 4. 그것도 찼다                       → RejectedExecutionHandler
 ```
-**⚠️ 큐가 먼저다.** 그래서 `LinkedBlockingQueue`처럼 무제한 큐를 쓰면 3번이 영원히 안 온다 → `maximumPoolSize`가 아무 의미가 없어지고, 대신 큐가 무한정 쌓여 OOM으로 간다.
+**⚠️ 큐가 먼저다.** 그래서 용량을 지정하지 않은 `LinkedBlockingQueue`처럼 무제한 큐를 쓰면 3번이 영원히 안 온다 → `maximumPoolSize`가 아무 의미가 없어지고, 대신 큐가 무한정 쌓여 OOM으로 간다.
+
+자바독이 이 순서와 결과를 그대로 적어 뒀다. *"If corePoolSize or more threads are running, the Executor always prefers queuing a request rather than adding a new thread. If a request cannot be queued, a new thread is created unless this would exceed maximumPoolSize, in which case, the task will be rejected."* 무제한 큐 항목은 더 노골적이다. *"Using an unbounded queue (for example a LinkedBlockingQueue without a predefined capacity) ... Thus, no more than corePoolSize threads will ever be created. (And the value of the maximumPoolSize therefore doesn't have any effect.)"*
 
 ### 2-6. Virtual Thread
 
@@ -191,8 +205,10 @@ hashCode로 버킷을 먼저 찾고, 그 안에서 equals로 비교하기 때문
 
 **`synchronized` 블록 안에서 블로킹하면 언마운트가 안 된다.** carrier를 붙잡고(pinning) 놓지 않는다. 가상 스레드를 아무리 많이 만들어도 carrier 수만큼만 동시 실행되고, 최악의 경우 전부 묶여 멈춘다.
 
-- **회피책: `ReentrantLock`으로 바꾼다** (언마운트가 정상 동작)
-- JDK 21 기준의 제약이고, 이후 버전에서 개선되었다. **"21 기준으로는 그랬다"**고 말하는 게 정확하다
+핀 되는 조건은 하나가 아니라 둘이다. Oracle 문서는 이렇게 적는다. *"The virtual thread runs code inside a `synchronized` block or method"*, *"The virtual thread runs a `native` method or a foreign function"*. **네이티브 호출과 FFI도 같은 함정이다.**
+
+- **회피책: `ReentrantLock`으로 바꾼다.** 문서의 권고도 같다. *"Try avoiding frequent and long-lived pinning by revising `synchronized` blocks or methods that run frequently and guarding potentially long I/O operations with java.util.concurrent.locks.ReentrantLock."*
+- JDK 21 기준의 제약이다. **"21 기준으로는 그랬다"**고 말하는 게 정확하다
 
 #### (5) ⚠️⚠️ 진짜 병목은 스레드가 아니라 그 뒤다
 
@@ -202,5 +218,28 @@ hashCode로 버킷을 먼저 찾고, 그 안에서 equals로 비교하기 때문
 
 **동시성을 늘리는 것과 처리량을 늘리는 것은 다르다.** 가상 스레드는 대기하는 비용을 싸게 만들 뿐, 뒤쪽의 처리 능력을 늘려주지 않는다.
 
+Oracle 문서가 이 문장을 직접 적어 뒀다. *"Virtual threads are not faster threads; they do not run code any faster than platform threads. They exist to provide scale (higher throughput), not speed (lower latency)."* 적합/부적합의 근거도 같은 문서에 있다. *"Virtual threads are suitable for running tasks that spend most of the time blocked, often waiting for I/O operations to complete. However, they aren't intended for long-running CPU-intensive operations."*
+
 > **"가상 스레드로 바꿨더니 빨라졌다"로 끝내면 안 되는 이유다.** 무엇이 얼마나 좋아지는지는 대체로 스레드가 아니라 그 뒤의 자원이 정한다.
 > → [트랜잭션 · 락](../database/basics/transaction-and-lock.md) §2-10 커넥션 풀과 같은 이야기다
+
+---
+
+> **기준 버전**: JDK 21 (LTS). §2-2의 GC 목록과 기본값, §2-6의 pinning 조건이 여기에 묶인다
+> **확인한 출처**:
+> - [Available Collectors (JDK 21 GC Tuning Guide)](https://docs.oracle.com/en/java/javase/21/gctuning/available-collectors.html) — §2-2 표 전체. 수집기 **4종(Serial · Parallel · G1 · ZGC)**, *"G1 is selected by default on most hardware and operating system configurations"*, Serial의 *"up to approximately 100 MB)"*, Parallel의 *"also known as throughput collector"*, ZGC의 *"provides max pause times under a millisecond, but at the cost of some throughput"*
+> - [Garbage-First Garbage Collector (JDK 21)](https://docs.oracle.com/en/java/javase/21/gctuning/garbage-first-g1-garbage-collector1.html) — §2-2 리전과 승격. *"A region is the unit of memory allocation and memory reclamation"*, *"reclaims space in the most efficient areas first ... therefore the name"*, *"these regions are typically laid out in a noncontiguous pattern in memory"*, *"copied into survivor or old regions, depending on their age"*
+> - [`java.util.HashMap` (JDK 21 javadoc)](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/HashMap.html) — §2-4의 기본 용량 **16** · 부하율 **0.75**와 재해시 규칙, 0.75의 근거 문장. **트리 전환은 이 자바독에 없다는 사실도 여기서 확인했다**
+> - [OpenJDK `HashMap.java` (jdk-21+35)](https://github.com/openjdk/jdk/blob/jdk-21%2B35/src/java.base/share/classes/java/util/HashMap.java) — §2-4의 `TREEIFY_THRESHOLD` **8** · `MIN_TREEIFY_CAPACITY` **64** · `UNTREEIFY_THRESHOLD` **6**과 각 주석 원문, 해시 섞기의 *"we just XOR some shifted bits ... to incorporate impact of the highest bits"*
+> - [`ThreadPoolExecutor` (JDK 21 javadoc)](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/ThreadPoolExecutor.html) — §2-5의 처리 순서 3줄과 무제한 큐 문단 원문, 거절 핸들러 4종(`AbortPolicy`가 기본)
+> - [Virtual Threads (JDK 21 Core Libraries)](https://docs.oracle.com/en/java/javase/21/core/virtual-threads.html) — §2-6 전체. 마운트/언마운트, **pinning 조건 2종(`synchronized`, 네이티브·foreign function)**, `ReentrantLock` 권고, I/O 대기에 적합·CPU 집약에 부적합, *"not faster threads ... provide scale (higher throughput), not speed (lower latency)"*
+> **미확인**:
+> - **G1이 Java 9부터 기본**(§2-2) — JDK 21 문서로 "지금 기본"인 것만 확인했다. 도입 릴리스는 JEP 248을 열어야 하는데 openjdk.org가 접근을 막아 대조하지 못했다
+> - **`MaxGCPauseMillis`의 기본값**(§2-2) — 이 옵션이 정지 시간 목표를 조절한다는 것까지는 튜닝 가이드에 있으나 **기본값은 문서에서 찾지 못했다.** 그래서 본문에 숫자를 쓰지 않았다
+> - **약한 세대 가설·Eden/S0/S1 복사·승격 age 임계**(§2-2) — G1의 리전 서술은 대조했지만, 세대 가설 자체와 age 기반 승격의 구체 수치는 GC 튜닝 가이드에서 확인하지 못했다
+> - **PermGen → 메타스페이스 전환 이유**(§2-1) — JEP 122가 원전인데 openjdk.org 403으로 열지 못했다
+> - **`volatile`의 가시성/원자성 구분, CAS, `synchronized` vs `ReentrantLock` 차이**(§2-5) — JLS와 `java.util.concurrent` 패키지 문서로 대조하지 않았다. 표의 O/X는 통설을 옮긴 것이다
+> - **`ConcurrentHashMap`이 CAS + 버킷 단위 부분 잠금**(§2-4) — 자바독으로 확인하지 않았다
+> - **메모리 누수 패턴과 진단 흐름**(§2-3) — 도구(jstat·jmap·MAT) 사용법과 `-XX:+HeapDumpOnOutOfMemoryError` 동작을 문서로 대조하지 않았다
+> - **JDK 21 이후 pinning 개선 여부**(§2-6) — 이전 판은 "이후 버전에서 개선되었다"고 단정했으나 근거 문서(JEP)를 열지 못해 그 문장을 뺐다
+> **미작성**: JIT 컴파일과 JVM 워밍업 · 클래스 로더 계층과 위임 모델 · `CompletableFuture`와 리액티브 · JMM의 happens-before 규칙 · 힙 외 메모리(다이렉트 버퍼·네이티브 누수)

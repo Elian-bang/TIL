@@ -111,9 +111,14 @@ DP는 "표를 채우는 기법"이 아니라 **두 전제에 붙은 이름**이�
 
 최적 부분 구조가 없으면 **DP도 그리디도 성립하지 않는다.** "부분을 최적으로 만들면 전체가 최적"이 아닌 문제는 결국 전부 탐색하거나 근사해야 한다.
 
-실무에서 DP를 직접 짤 일은 드물다. 그런데 **DP가 돌고 있는 걸 읽어야 할 때는 있다.** 옵티마이저의 조인 순서 탐색이 그것이다.
+실무에서 DP를 직접 짤 일은 드물다. 그런데 **조합 폭발을 눌러 가며 최적해를 찾는 탐색이 돌고 있는 걸 읽어야 할 때는 있다.** 옵티마이저의 조인 순서 탐색이 그것이다.
 
-n개 테이블의 조인 순서는 n!이다. 옵티마이저는 "이 테이블 부분집합의 최적 플랜"을 저장해 재사용하는 식으로 이 폭발을 누른다. 전형적인 DP다. 그런데 **테이블이 많아지면 DP조차 감당이 안 돼서 탐색 전략을 바꾼다.** MySQL은 탐색 깊이를 제한한 그리디로, PostgreSQL은 유전 알고리즘(GEQO)으로 넘어간다.
+n개 테이블의 조인 순서는 n!이다. 옵티마이저는 이 폭발을 그대로 감당하지 못한다. 그래서 두 제품이 각자 다른 방식으로 탐색을 깎는데, **깎는 방식이 서로 다르다는 게 요점이다.**
+
+- **PostgreSQL은 임계를 기준으로 갈아탄다.** 문서 표현이 정확하다. *"If the query uses fewer than geqo_threshold relations, a near-exhaustive search is conducted to find the best join sequence"*, 그리고 *"When geqo_threshold is exceeded, the join sequences considered are determined by heuristics"*. 그 휴리스틱이 유전 알고리즘(GEQO)이고, `geqo_threshold` 기본값은 12다
+- **MySQL은 갈아타지 않고 같은 탐색을 깎는다.** 문서는 *"a more or less exhaustive search"*라고 쓴다. 여기에 `optimizer_prune_level`(기본 1)이 행 수 추정으로 가지를 쳐 내고, `optimizer_search_depth`가 미완성 플랜을 얼마나 앞까지 내다볼지를 제한한다. 테이블이 *"less than 7 to 10"*이면 완전 탐색이 문제되지 않지만, 12개를 넘고 탐색 깊이가 테이블 수에 가까우면 컴파일에 *"hours or days"*가 걸릴 수 있다고 적혀 있다
+
+⚠️ 흔히 "옵티마이저의 조인 순서 탐색은 DP"라고 말하지만, **두 제품 공식 문서 어디에도 dynamic programming이라는 말은 없다.** 부분해를 재사용한다는 발상 자체는 System R 계열 옵티마이저의 고전이되, 지금 이 두 제품이 문서에 적어 둔 것은 "가지치기와 깊이 제한을 곁들인 준-완전 탐색"(MySQL)과 "임계 미만 준-완전 탐색, 넘으면 유전 알고리즘"(PostgreSQL)이다.
 
 > **여기가 플랜이 나빠지는 지점이다.** "조인 테이블 수가 임계를 넘으면 옵티마이저가 최적 순서를 포기한다"는 걸 알아야, 조인 12개짜리 쿼리의 플랜이 이상할 때 통계만 의심하지 않는다 (→ [쿼리 실행](../database/basics/query-execution.md) §2-3, §2-4).
 
@@ -185,13 +190,21 @@ n개 테이블의 조인 순서는 n!이다. 옵티마이저는 "이 테이블 �
 
 - 이 알고리즘들이 올라타는 구조와 정렬 → [자료구조](data-structures.md)
 - "시작점을 찾는다"가 저장소에서 구현된 모습 → [DB 인덱스](../database/basics/b-tree-index.md) §2-1, §2-6
-- 조인 순서 탐색이 DP에서 그리디로 넘어가는 지점 → [쿼리 실행](../database/basics/query-execution.md) §2-3
+- 조인 순서 탐색이 완전 탐색을 포기하는 지점 → [쿼리 실행](../database/basics/query-execution.md) §2-3
 - 메모이제이션의 무효화 있는 버전 → [Redis](../datastore/redis.md) §2-4
 - 지역 최적이 전역 최적을 깨는 운영 사례들 → [대용량 처리](../system-design/high-throughput.md) §2-5, §2-7
 
 ---
 
 > **기준 버전**: 특정 언어·제품 버전에 의존하지 않는 판단 프레임. §2-5의 옵티마이저 서술만 MySQL 8.4 · PostgreSQL 17을 염두에 둔다
-> **확인한 출처**: 없음 — 이 문서는 아직 공식 문서 대조를 거치지 않았다
-> **미확인**: §2-5 옵티마이저의 조인 순서 탐색이 DP라는 서술과, 임계를 넘으면 MySQL이 탐색 깊이 제한 그리디로 · PostgreSQL이 GEQO로 전환한다는 서술 — 파라미터 이름과 기본 임계값을 공식 문서로 대조하지 않았다 / §2-4에서 성공률(곱셈)을 로그로 덧셈으로 바꾸는 처리는 이론상 성립하나, 실제 라우팅 구현이 그렇게 하는지는 확인하지 않았다
+> **확인한 출처**:
+> - [Controlling Query Plan Evaluation (MySQL 8.4)](https://dev.mysql.com/doc/refman/8.4/en/controlling-query-plan-evaluation.html) — §2-5의 MySQL 쪽 전부. *"a more or less exhaustive search"*, 플랜 수가 테이블 수에 대해 지수적으로 증가, *"less than 7 to 10"*이면 문제없음, 12개 이상에서 *"hours or days"*, `optimizer_prune_level` 기본 **1**(행 수 추정 기반 가지치기, 켜 둬도 여전히 지수 규모를 탐색한다), `optimizer_search_depth`는 미완성 플랜의 **미리보기 깊이**이고 0이면 자동 결정
+> - [Planner/Optimizer (PostgreSQL 17)](https://www.postgresql.org/docs/17/planner-optimizer.html) — *"If the query uses fewer than geqo_threshold relations, a near-exhaustive search is conducted to find the best join sequence"*, *"When geqo_threshold is exceeded, the join sequences considered are determined by heuristics"* / [Query Planning 설정](https://www.postgresql.org/docs/17/runtime-config-query.html) — `geqo` 기본 **on**, `geqo_threshold` *"The default is 12."*, `from_collapse_limit` 기본 **8**이고 `join_collapse_limit`은 그와 동일
+> - [Genetic Query Optimizer (PostgreSQL 17)](https://www.postgresql.org/docs/17/geqo-pg-intro.html) — GEQO가 *"non-exhaustive search"*라는 것
+> - **본문을 고쳤다**: 이전 판은 "옵티마이저의 조인 순서 탐색은 전형적인 DP이고, 임계를 넘으면 MySQL은 탐색 깊이를 제한한 그리디로 넘어간다"고 썼다. **두 제품 문서 어디에도 dynamic programming도 greedy도 없다.** MySQL은 전략을 갈아타지 않고 가지치기와 깊이 제한으로 같은 탐색을 깎으며, 임계를 넘겨 다른 알고리즘으로 넘어가는 쪽은 PostgreSQL이다
+> **미확인**:
+> - **§2-1 이진 탐색·파라메트릭 서치, §2-3 BFS/DFS, §2-5 DP 전제, §2-7 그리디의 교환 논증** — 교과서(CLRS 계열) 개념으로 서술했고 원전 대조는 하지 않았다. 특정 제품 문서로 확인할 대상이 아니다
+> - **§2-4에서 성공률(곱셈)을 로그로 덧셈으로 바꾸는 처리** — 이론상 성립하나 실제 라우팅 구현이 그렇게 하는지는 확인하지 않았다
+> - **§2-1의 인덱스 관련 서술**(`LIKE '%...%'`·딥 페이징·커서 페이징) — 이 문서에서 재대조하지 않았고 [DB 인덱스](../database/basics/b-tree-index.md)의 기존 서술을 따랐다
+> - **§2-8 한국 화폐 체계에서 그리디가 항상 최적** — 액면 집합에 대한 정준(canonical) 여부를 증명하거나 인용하지 않았다
 > **미작성**: 문자열 알고리즘(KMP · 트라이 응용) · 근사 알고리즘과 근사비 · 병렬/분산 알고리즘(맵리듀스 계열). **정렬은 여기가 아니라 [자료구조](data-structures.md) §2-6에 있다**

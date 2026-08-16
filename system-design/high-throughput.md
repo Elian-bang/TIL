@@ -39,10 +39,10 @@
 없으면 어떻게 되나. 큐에 계속 쌓인다 → 메모리 큐면 OOM, 디스크 큐면 디스크가 찬다. 그리고 쌓인 만큼 지연이 늘어난다. "느려진다"가 아니라 **"언젠가 죽는다"**가 정확한 표현이다.
 
 **각 시스템이 백프레셔를 구현하는 방식:**
-- **RabbitMQ**: prefetch(QoS)로 컨슈머가 한 번에 받아 갈 개수를 제한한다
+- **RabbitMQ**: prefetch(QoS)로 제한한다. 정확히는 "받아 갈 개수"가 아니라 *"the number of unacknowledged messages on a channel (or connection) when consuming"*이다. **ack를 늦추면 그만큼 유입이 막힌다는 게 요점이다**
 - **Kafka**: pull 모델 자체가 백프레셔다. 컨슈머가 자기 속도로 가져간다
 - **스레드 풀**: 유계 큐(bounded queue) + Reject 정책 ← [Java](../java/jvm-gc-concurrency.md) §2-5. 무제한 큐를 쓰면 백프레셔가 사라진다
-- **HTTP API**: 429 Too Many Requests 반환
+- **HTTP API**: 429 Too Many Requests 반환. RFC 6585의 정의가 *"The 429 status code indicates that the user has sent too many requests in a given amount of time ("rate limiting")."*이고, 서버는 `Retry-After`로 언제 다시 오라고 알려 줄 수 있다. 한 줄 덧붙이면 *"Responses with the 429 status code MUST NOT be stored by a cache."*라 캐시가 이 거절을 대신 돌려주는 일은 없다
 
 > 백프레셔는 **"거절할 수 있어야 한다"**는 뜻이다. 다 받아 놓고 나중에 죽는 것보다, 지금 거절하는 게 낫다.
 
@@ -87,9 +87,14 @@ CLOSED (정상)  --실패율이 임계치 초과-->  OPEN (차단)
                                     시험 요청 몇 개만 보내 본다
                                      성공 → CLOSED / 실패 → OPEN
 ```
-- **OPEN 상태에서는 호출을 아예 안 한다.** 즉시 실패시킨다 → 스레드가 안 묶인다
-- **HALF-OPEN**이 있는 이유: 무작정 기다리면 언제 살아났는지 모른다. 조금씩 찔러 본다
+- **OPEN 상태에서는 호출을 아예 안 한다.** 즉시 실패시킨다 → 스레드가 안 묶인다. Resilience4j는 이때 `CallNotPermittedException`을 던진다
+- **HALF-OPEN**이 있는 이유: 무작정 기다리면 언제 살아났는지 모른다. 조금씩 찔러 본다(`permittedNumberOfCallsInHalfOpenState`), OPEN에 머무는 시간은 `waitDurationInOpenState`다
 - 구현: **Resilience4j** (Hystrix는 유지보수 종료)
+
+**⚠️ 위 그림에서 두 가지가 빠져 있다.** Resilience4j 문서를 보면 이렇다.
+- **여는 조건이 실패율 하나가 아니다.** 실패율 임계치와 **느린 호출 비율** 임계치가 각각 있고, 둘 중 하나만 넘어도 열린다. 타임아웃 직전까지 끌다가 성공하는 채널사는 실패율로는 안 잡히고 이쪽으로 잡힌다
+- **최소 호출 수를 채우기 전에는 열리지 않는다.** 전이는 *"a minimum number of calls were recorded"* 이후에만 일어난다. 그래서 **트래픽이 적은 채널은 3건 연속 실패해도 서킷이 안 열린다.** "왜 안 열리지"의 답이 대체로 여기 있다
+- 상태는 셋이 아니라 여섯이다. 정상 3종(CLOSED · OPEN · HALF_OPEN) 외에 운영용 특수 상태 셋이 더 있다. `DISABLED`(항상 통과, 기록 안 함) · `FORCED_OPEN`(항상 차단) · `METRICS_ONLY`(통과시키되 지표만 기록). **장애 대응 중 수동으로 끊거나 열어 둘 때 쓰는 손잡이다**
 
 **⚠️ 함께 가야 하는 것: 타임아웃**
 서킷 브레이커가 있어도 **타임아웃이 없으면 소용없다.** 무한 대기하면 실패로 카운트도 안 된다.
@@ -234,3 +239,21 @@ CLOSED (정상)  --실패율이 임계치 초과-->  OPEN (차단)
 - **SAGA**: 분산 트랜잭션을 보상 트랜잭션으로. 발송은 되돌릴 수 없어서(문자는 회수 불가) 오히려 멱등이 답
 - **블룸 필터**: "확실히 없음"만 판정. 대량 발송의 중복 수신자 1차 필터로 쓸 수 있다
 - **Consumer lag**: 컨슈머가 얼마나 뒤처졌나. **큐 시스템의 가장 중요한 지표**
+
+---
+
+> **기준 버전**: 제품 버전에 묶이지 않는 설계 개념 정리. 대조한 것은 §2-2의 429와 §2-4의 서킷 브레이커 동작뿐이고, 나머지는 패턴 서술이다
+> **확인한 출처**:
+> - [RFC 6585 §4 (429 Too Many Requests)](https://www.rfc-editor.org/rfc/rfc6585.html) — §2-2. 정의 원문, `Retry-After` 허용, *"Responses with the 429 status code MUST NOT be stored by a cache."*
+> - [Resilience4j CircuitBreaker 문서](https://resilience4j.readme.io/docs/circuitbreaker) — §2-4. **상태 6종**(CLOSED · OPEN · HALF_OPEN + DISABLED · FORCED_OPEN · METRICS_ONLY), OPEN에서 *"rejects calls with a `CallNotPermittedException`"*, **실패율과 느린 호출 비율 두 임계치**, 전이 전에 *"a minimum number of calls were recorded"*가 필요하다는 조건, `waitDurationInOpenState`·`permittedNumberOfCallsInHalfOpenState`
+> - [Resilience4j Retry 문서](https://resilience4j.readme.io/docs/retry) — §2-5. `waitDuration`(기본 500ms)·`intervalFunction`이 있고 `ofExponentialBackoff`·`ofRandomized` 같은 팩토리가 제공된다는 것까지
+> - [RabbitMQ Consumer Prefetch](https://www.rabbitmq.com/docs/consumer-prefetch) — §2-2. prefetch가 제한하는 대상이 "받아 가는 개수"가 아니라 **채널·커넥션의 미확인(unacknowledged) 메시지 수**라는 것. 본문을 이 표현으로 고쳤다
+> **미확인**:
+> - **지터의 근거**(§2-5) — Resilience4j에 랜덤 간격 함수가 있다는 것은 확인했지만, **문서는 지터가 왜 필요한지를 설명하지 않는다.** thundering herd 서술은 통설이고 원전 대조를 하지 못했다
+> - **토큰 버킷 / 리키 버킷**(§2-3) — 단일 공식 출처가 없어 대조하지 않았다. 표의 "버스트 허용 / 완전 균일" 구분은 교과서 서술이다
+> - **Kafka의 pull 모델이 백프레셔라는 서술**(§2-2) — Kafka 공식 문서의 Design > Push vs. pull 절을 열려 했으나 kafka.apache.org가 본문을 내려 주지 않아 대조하지 못했다
+> - **멱등성과 재시도가 세트라는 서술**(§2-5, §2-6) — RFC 9110 §2.4의 *"Some requests can be automatically retried by a client in the event of an underlying connection failure, as described in Section 9.2.2."*까지는 확인했다. **§9.2.2 본문은 문서가 너무 커서 끝까지 읽어 내지 못해 정의문과 멱등 메서드 목록을 원문으로 확보하지 못했다**
+> - **3층 방어와 선기록**(§2-6) — 도메인 설계 판단이다. DB 유니크 제약만이 조회-INSERT 사이의 틈을 없앤다는 원리는 [트랜잭션 · 락](../database/basics/transaction-and-lock.md) 쪽 서술에 기대고 있고 여기서 재대조하지 않았다
+> - **파티셔닝 핫스팟 · 벌크 처리 · 관측 3요소 · 채널 어댑터 구조**(§2-7 ~ §2-11) — 제품 문서로 확인할 대상이 아닌 설계 서술이다. Kafka 파티션과 ES 샤드의 실물은 각 문서에 있다
+> - **CAP / PACELC · Outbox · SAGA**(§2-12) — 어휘 정리 수준이고 원전(Brewer · Abadi 등) 대조를 하지 않았다
+> **미작성**: 정확히 한 번(exactly-once) 의미론과 트랜잭셔널 아웃박스의 한계 · 데드레터 큐 운영 · 멀티 리전과 지역 장애 격리 · 셀 기반 아키텍처 · 부하 테스트 설계와 용량 산정 절차 · SLO/에러 버짓

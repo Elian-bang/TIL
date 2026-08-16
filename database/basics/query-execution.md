@@ -208,5 +208,8 @@ DB 안의 Nested Loop  : 100 × 인덱스 탐색(마이크로초)     ≈ 무시
 ---
 
 > **기준 버전**: MySQL 8.4 · PostgreSQL 17
-> **확인한 출처**: 없음 — 이 문서는 아직 공식 문서 대조를 거치지 않았다
-> **미확인**: Hash Join 도입 버전(8.0.18) · Block Nested Loop 대체 시점(8.0.20) · `GROUP BY` 암묵 정렬 제거(8.0) · PostgreSQL `CREATE STATISTICS` 도입 버전(10) — 전부 기억에 기반한 서술이므로 재확인 필요 / §2-4의 선택도 예시는 실측이 아니라 자릿수 감각용 가정이다
+> **확인한 출처**:
+> - [MySQL 10.2.1.4 Hash Join Optimization](https://dev.mysql.com/doc/refman/8.0/en/hash-joins.html) — **8.0.18 도입**, **8.0.20에서 Block Nested Loop 제거**와 비등치·아우터 조인 확대, `join_buffer_size` 상한과 디스크 스필
+>
+> [MySQL 인덱스와 옵티마이저](../mysql/index-and-optimizer.md)를 쓰면서 대조한 것을 옮겨 왔다. 옵티마이저 힌트·히스토그램·ICP·MRR의 원문 근거도 그쪽에 있다.
+> **미확인**: `GROUP BY` 암묵 정렬 제거 시점 · PostgreSQL `CREATE STATISTICS` 도입 버전 · 옵티마이저가 조인 순서를 탐색하는 알고리즘. §2-4의 선택도 예시는 실측이 아니라 자릿수 감각용 가정이다

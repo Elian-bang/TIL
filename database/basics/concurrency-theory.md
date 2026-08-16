@@ -161,6 +161,6 @@ T2가 테이블 전체에 X 락을 걸려 할 때:
 ---
 
 > **기준 버전**: MySQL 8.4 · PostgreSQL 17 (§2-7 비교표)
-> **확인한 출처**: 없음 — 이 문서는 아직 공식 문서·교과서 대조를 거치지 않았다
+> **확인한 출처**: 없음. 직렬 가능성·2PL·다중 입도 락은 DB 이론이라 **제품 문서에 정의가 없다.** 다만 각 엔진이 이 이론을 어떻게 구현했는지는 대조돼 있다. 의도 락은 [MySQL 락과 격리](../mysql/lock-and-isolation.md) §2-5, SSI는 [PostgreSQL 락과 타입](../../postgresql/lock-and-types.md) §2-3이 원문 근거를 갖는다
 > **미확인**: 충돌 직렬 가능성의 형식적 정의 · 2PL이 직렬 가능성을 보장한다는 증명 · Thomas Write Rule의 정확한 조건 · PostgreSQL SSI의 동작 세부 — 전부 교과서·공식 문서 대조 필요
 > **미작성**: 뷰 직렬 가능성 · 그래프 기반 프로토콜 · 회복 가능 스케줄의 분류(recoverable / cascadeless / strict)

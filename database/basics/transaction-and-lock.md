@@ -196,5 +196,10 @@ SELECT * FROM send_queue WHERE status='READY' LIMIT 100 FOR UPDATE SKIP LOCKED;
 ---
 
 > **기준 버전**: MySQL 8.4 · PostgreSQL 17
-> **확인한 출처**: 없음 — 이 문서는 아직 공식 문서 대조를 거치지 않았다
-> **미확인**: 격리 수준별 기본값(InnoDB=REPEATABLE READ, PostgreSQL=READ COMMITTED) · 갭 락 동작 · 데드락 탐지 방식 — 전부 재확인 필요. PostgreSQL의 팬텀 차단은 갭 락이 아니라 SSI이므로 §2-5는 **InnoDB 한정 서술**이다
+> **확인한 출처**:
+> - [MySQL 17.7.2.1 Transaction Isolation Levels](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html) — *"The default isolation level for InnoDB is REPEATABLE READ"*, RC에서 *"phantom row problems may occur"*
+> - [MySQL 17.7.1 InnoDB Locking](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking.html) — 레코드·갭·넥스트키 락 정의 원문, 갭 락이 *"purely inhibitive"*라는 서술
+> - [PostgreSQL 13.2 Transaction Isolation](https://www.postgresql.org/docs/current/transaction-iso.html) — *"Read Committed is the default isolation level"*
+>
+> 위 셋은 [MySQL 락과 격리](../mysql/lock-and-isolation.md)·[PostgreSQL 락과 타입](../../postgresql/lock-and-types.md)을 쓰면서 원문 대조한 것을 옮겨 왔다. 갭 락의 상세 동작(구간 표기·유니크 등치 예외·insert intention lock)은 그쪽이 정본이다.
+> **미확인**: 데드락 탐지의 내부 동작(wait-for graph 순환 감지)과 `innodb_lock_wait_timeout` 기본값 50초 · MVCC의 Read View 판정 규칙. PostgreSQL의 팬텀 차단은 갭 락이 아니라 SSI이므로 §2-5는 InnoDB 한정 서술이다
