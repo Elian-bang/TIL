@@ -9,6 +9,7 @@
 * [쿼리 실행 — 옵티마이저는 왜 그 플랜을 골랐나](database/basics/query-execution.md)
 * [트랜잭션 · 락 · 데드락 (+ 커넥션 풀)](database/basics/transaction-and-lock.md)
 * [내구성과 복구 — COMMIT은 무엇을 보장하나](database/basics/durability-and-recovery.md)
+* [복제와 파티셔닝 — 한 대로 안 될 때](database/basics/replication-and-partitioning.md)
 * [동시성 제어 이론 — 격리 수준은 어디서 나왔나](database/basics/concurrency-theory.md)
 * [데이터 모델링 — 키와 함수 종속](database/basics/data-modeling.md)
 * [정규화 — 쪼개는 규칙과 되돌리는 판단](database/basics/normalization.md)

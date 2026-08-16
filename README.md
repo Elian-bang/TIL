@@ -22,6 +22,7 @@ B+Tree가 왜 B-Tree가 아닌지, InnoDB의 락이 왜 인덱스에 걸리는�
 - [쿼리 실행 — 옵티마이저는 왜 그 플랜을 골랐나](database/basics/query-execution.md)
 - [트랜잭션 · 락 · 데드락 (+ 커넥션 풀)](database/basics/transaction-and-lock.md)
 - [내구성과 복구 — COMMIT은 무엇을 보장하나](database/basics/durability-and-recovery.md)
+- [복제와 파티셔닝 — 한 대로 안 될 때](database/basics/replication-and-partitioning.md)
 - [동시성 제어 이론 — 격리 수준은 어디서 나왔나](database/basics/concurrency-theory.md)
 - [데이터 모델링 — 키와 함수 종속](database/basics/data-modeling.md)
 - [정규화 — 쪼개는 규칙과 되돌리는 판단](database/basics/normalization.md)
@@ -73,7 +74,7 @@ B+Tree가 왜 B-Tree가 아닌지, InnoDB의 락이 왜 인덱스에 걸리는�
 - [x] ~~**전송 계층 보강** — 혼잡 제어·흐름 제어·TIME_WAIT~~ (RFC 5681 대조 완료)
 - [ ] **프로세스 스케줄링** — CPU 스케줄링 알고리즘·선점/비선점. *"컨텍스트 스위칭이 비싸다"를 전제로 쓰는데 스케줄러가 언제 왜 전환하는지가 없다*
 - [ ] **동기화 원시타입** — 임계 구역·뮤텍스 vs 세마포어·모니터. *DB 락을 다루면서 그 원형인 OS 동기화가 없다*
-- [ ] **복제와 파티셔닝** — 복제 지연·읽기 분산·페일오버·샤드 키. *[내구성과 복구](database/basics/durability-and-recovery.md) §2-8이 "복제는 다른 장비에서 계속되는 크래시 복구"까지만 걸어 두고 끊긴다*
+- [x] ~~**복제와 파티셔닝** — 복제 지연·읽기 분산·페일오버~~ (PostgreSQL 공식 문서 대조 완료)
 - [ ] **RDB 전문 검색** — `LIKE '%..%'`가 인덱스를 못 타는 이유·n-gram·형태소
 - [ ] **MySQL 4편** — InnoDB 내부 / 갭 락·MDL / Full-Text·옵티마이저 / binlog·Online DDL
 - [ ] **PostgreSQL 4편** — MVCC와 VACUUM / 힙과 인덱스(GIN·GiST·BRIN) / SSI·jsonb / 논리 복제·PgBouncer
