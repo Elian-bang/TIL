@@ -17,65 +17,65 @@ B+Tree가 왜 B-Tree가 아닌지, InnoDB의 락이 왜 인덱스에 걸리는�
 ## 목차
 
 **Database** — `기초`(엔진 무관 원리) · `mysql`(InnoDB 고유) · `postgresql`(PG 고유) 세 갈래로 관리한다.
-- [저장과 I/O — DB는 디스크를 어떻게 다루나](database/basics/storage-and-io.md)
-- [DB 인덱스 — B+Tree는 왜 그렇게 생겼나](database/basics/b-tree-index.md)
-- [쿼리 실행 — 옵티마이저는 왜 그 플랜을 골랐나](database/basics/query-execution.md)
+- [DB는 디스크를 어떻게 다루나](database/basics/storage-and-io.md)
+- [B+Tree는 왜 그렇게 생겼나](database/basics/b-tree-index.md)
+- [옵티마이저는 왜 그 플랜을 골랐나](database/basics/query-execution.md)
 - [트랜잭션 · 락 · 데드락 (+ 커넥션 풀)](database/basics/transaction-and-lock.md)
-- [내구성과 복구 — COMMIT은 무엇을 보장하나](database/basics/durability-and-recovery.md)
-- [복제와 파티셔닝 — 한 대로 안 될 때](database/basics/replication-and-partitioning.md)
-- [동시성 제어 이론 — 격리 수준은 어디서 나왔나](database/basics/concurrency-theory.md)
-- [데이터 모델링 — 키와 함수 종속](database/basics/data-modeling.md)
-- [정규화 — 쪼개는 규칙과 되돌리는 판단](database/basics/normalization.md)
-- [전문 검색 — LIKE는 왜 인덱스를 못 타나](database/basics/text-search.md)
+- [COMMIT은 무엇을 보장하나](database/basics/durability-and-recovery.md)
+- [DB 한 대로 안 될 때](database/basics/replication-and-partitioning.md)
+- [격리 수준은 어디서 나왔나](database/basics/concurrency-theory.md)
+- [키와 함수 종속](database/basics/data-modeling.md)
+- [쪼개는 규칙과 되돌리는 판단](database/basics/normalization.md)
+- [RDB 전문 검색은 어디까지 되나](database/basics/text-search.md)
 
 **MySQL**
-- [InnoDB 내부 — 버퍼 풀 위에 얹힌 것들](database/mysql/innodb-internals.md)
-- [락과 격리 — 넥스트키 락과 MDL](database/mysql/lock-and-isolation.md)
-- [인덱스와 옵티마이저 — MySQL 고유 손잡이](database/mysql/index-and-optimizer.md)
-- [복제와 운영 — binlog·GTID·Online DDL](database/mysql/replication-and-ops.md)
+- [엔진을 갈아 끼울 수 있게 만든 대가](database/mysql/innodb-internals.md)
+- [기본값이 REPEATABLE READ라서 생기는 일들](database/mysql/lock-and-isolation.md)
+- [MySQL이 따로 쥐고 있는 손잡이들](database/mysql/index-and-optimizer.md)
+- [binlog 하나가 복제·운영·스키마 변경을 다 정한다](database/mysql/replication-and-ops.md)
 
 **PostgreSQL**
-- [MVCC와 VACUUM — 청소가 왜 필수 업무인가](postgresql/mvcc-and-vacuum.md)
-- [힙과 인덱스 — 인덱스는 왜 힙을 못 벗어나나](postgresql/heap-and-index.md)
-- [락과 타입 — 갭 락 없이 팬텀을 막는 법](postgresql/lock-and-types.md)
-- [복제와 운영 — WAL 하나로 다 하는 대신 치르는 것](postgresql/replication-and-ops.md)
+- [청소가 왜 필수 업무인가](postgresql/mvcc-and-vacuum.md)
+- [인덱스는 왜 힙을 못 벗어나나](postgresql/heap-and-index.md)
+- [갭 락 없이 팬텀을 막는 법](postgresql/lock-and-types.md)
+- [WAL 하나로 다 하는 대신 치르는 것](postgresql/replication-and-ops.md)
 
 **Messaging**
-- [메시징 기초 — 큐를 왜 쓰고, 무엇을 고를 것인가](messaging/basics.md)
-- [Kafka — 큐가 아니라 로그다](messaging/kafka.md)
-- [RabbitMQ — 소비하면 사라진다](messaging/rabbitmq.md)
+- [큐를 왜 쓰고, 무엇을 고를 것인가](messaging/basics.md)
+- [Kafka: 큐가 아니라 로그다](messaging/kafka.md)
+- [RabbitMQ: 소비하면 사라진다](messaging/rabbitmq.md)
 
 **Datastore**
-- [저장소 선택 — 무엇을 어디에 둘 것인가](datastore/selection.md)
-- [Elasticsearch — 역색인은 방향을 뒤집는다](datastore/elasticsearch.md)
-- [Redis — 싱글 스레드가 왜 설계 선택인가](datastore/redis.md)
+- [무엇을 어디에 둘 것인가](datastore/selection.md)
+- [Elasticsearch: 역색인은 방향을 뒤집는다](datastore/elasticsearch.md)
+- [Redis: 싱글 스레드가 왜 설계 선택인가](datastore/redis.md)
 
 **Java / Spring**
-- [Java — JVM · GC · 컬렉션 · 동시성](java/jvm-gc-concurrency.md)
-- [Spring — DI · AOP · 트랜잭션 · JPA · Batch](spring/di-aop-transaction-jpa.md)
+- [JVM · GC · 컬렉션 · 동시성](java/jvm-gc-concurrency.md)
+- [DI · AOP · 트랜잭션 · JPA · Batch](spring/di-aop-transaction-jpa.md)
 
 **System Design**
 - [대용량 처리 · 분산 시스템](system-design/high-throughput.md)
 
 **Fundamentals**
 - [자료구조](fundamentals/data-structures.md)
-- [알고리즘 — 복잡도가 아니라 전제로 고른다](fundamentals/algorithms.md)
+- [복잡도가 아니라 전제가 알고리즘을 고른다](fundamentals/algorithms.md)
 
 **OS**
-- [메모리와 페이징 — 없는 메모리를 있는 척하는 법](os/memory-and-paging.md)
-- [프로세스와 스레드 — 컨텍스트 스위칭은 왜 비싼가](os/process-and-scheduling.md)
-- [동시성 원시타입 — 동기/비동기와 블로킹/논블로킹](os/concurrency-primitives.md)
-- [리눅스 — 장애 났을 때 뭘 보나](os/linux-troubleshooting.md)
+- [없는 메모리를 있는 척하는 법](os/memory-and-paging.md)
+- [컨텍스트 스위칭은 왜 비싼가](os/process-and-scheduling.md)
+- [동기/비동기와 블로킹/논블로킹](os/concurrency-primitives.md)
+- [리눅스에서 장애 났을 때 뭘 보나](os/linux-troubleshooting.md)
 
 **Infra**
-- [컨테이너 — 가상머신이 아니라 격리된 프로세스다](infra/containers.md)
-- [Kubernetes — 선언한 상태로 계속 되돌리는 기계](infra/kubernetes.md)
+- [컨테이너: 가상머신이 아니라 격리된 프로세스다](infra/containers.md)
+- [Kubernetes: 선언한 상태로 계속 되돌리는 기계](infra/kubernetes.md)
 
 **Network**
-- [계층 모델 — OSI 7계층은 왜 7개인가](network/layered-model.md)
-- [전송 계층 — 연결은 왜 비싼가](network/transport-layer.md)
-- [응용 계층 — HTTP 상태코드와 TLS](network/application-layer.md)
-- [신뢰성 패턴 — 타임아웃과 멱등성](network/reliability-patterns.md)
+- [OSI 7계층은 왜 7개인가, 그리고 왜 안 맞는가](network/layered-model.md)
+- [얼마나 빨리 보낼지 누가 정하나](network/transport-layer.md)
+- [HTTP는 왜 세 번 다시 만들어졌나](network/application-layer.md)
+- [타임아웃과 멱등성](network/reliability-patterns.md)
 
 ---
 
